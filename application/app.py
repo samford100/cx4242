@@ -25,7 +25,7 @@ def get_user():
     return jsonify(result=g.current_user)
 
 @app.route("/api/tester", methods=["GET"])
-@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+# @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def get_test():
     return jsonify("cancer, duah")
 
