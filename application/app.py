@@ -27,7 +27,7 @@ def get_user():
 @app.route("/api/tester", methods=["GET"])
 @cross_origin(origin='*',headers=['Content-Type','Authorization'])
 def get_test():
-    return jsonify("cancer, dudh")
+    return jsonify("cancer, duah")
 
 
 @app.route("/api/create_user", methods=["POST"])
