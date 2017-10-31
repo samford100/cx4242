@@ -1,12 +1,12 @@
 from flask import request, render_template, jsonify, url_for, redirect, g
-from flask.ext.cors import CORS, cross_origin
+# from flask.cors import CORS, cross_origin
 from .models import User
 from index import app, db
 from sqlalchemy.exc import IntegrityError
 from .utils.auth import generate_token, requires_auth, verify_token
 
-cors = CORS(app, resources={r"/foo": {"origins": "*"}})
-app.config['CORS_HEADERS'] = 'Content-Type'
+# cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+# app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 @app.route('/', methods=['GET'])
