@@ -1,8 +1,12 @@
 from flask import request, render_template, jsonify, url_for, redirect, g
+from flask.ext.cors import CORS, cross_origin
 from .models import User
 from index import app, db
 from sqlalchemy.exc import IntegrityError
 from .utils.auth import generate_token, requires_auth, verify_token
+
+cors = CORS(app, resources={r"/foo": {"origins": "*"}})
+app.config['CORS_HEADERS'] = 'Content-Type'
 
 
 @app.route('/', methods=['GET'])
@@ -19,6 +23,11 @@ def any_root_path(path):
 @requires_auth
 def get_user():
     return jsonify(result=g.current_user)
+
+@app.route("/api/tester", methods=["GET"])
+@cross_origin(origin='*',headers=['Content-Type','Authorization'])
+def get_test():
+    return jsonify("cancer, duh")
 
 
 @app.route("/api/create_user", methods=["POST"])
@@ -62,3 +71,4 @@ def is_token_valid():
         return jsonify(token_is_valid=True)
     else:
         return jsonify(token_is_valid=False), 403
+
