@@ -3,6 +3,14 @@
 # dependencies
 /static/node_modules
 
+# model
+/static/public/x_test
+/static/public/y_test
+/static/public/model
+
+# data
+/static/public/intermediate_clean_2015_deaths.csv
+
 # testing
 /coverage
 

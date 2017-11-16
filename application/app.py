@@ -19,159 +19,167 @@ def any_root_path(path):
     return render_template('index.html')
 
 
-@app.route("/api/user", methods=["GET"])
-@requires_auth
-def get_user():
-    return jsonify(result=g.current_user)
-
 @app.route("/api/tester", methods=["GET"])
 def get_test():
+    print('inside /api/tester')
     response = jsonify({'death': 'cancer'})
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
-# inputs
-training_data = './static/public/train.csv'
-include = ['Age', 'Sex', 'Embarked', 'Survived']
-dependent_variable = include[-1]
 
-model_directory = 'model'
-model_file_name = '%s/model.pkl' % model_directory
-model_columns_file_name = '%s/model_columns.pkl' % model_directory
+# # inputs
+# training_data = './static/public/train.csv'
+# include = ['Age', 'Sex', 'Embarked', 'Survived']
+# dependent_variable = include[-1]
 
-# These will be populated at training time
-model_columns = None
-clf = None
+# model_directory = 'model'
+# model_file_name = '%s/model.pkl' % model_directory
+# model_columns_file_name = '%s/model_columns.pkl' % model_directory
+
+# # These will be populated at training time
+# model_columns = None
+# clf = None
 
 
-@app.route('/predict', methods=['POST'])
-def predict():
-    print("inside predict")
+@app.route('/testdeath', methods=['GET'])
+def testdeath():
+    print("inside test death")
     import pandas as pd
     from sklearn.externals import joblib
+    clf = joblib.load('./static/public/model')
     if clf:
+        print('successfully loaded -- ready to test')
         try:
-            json_ = [
-                {'Age': 85, 'Sex': 'male', 'Embarked': 'S'},
-                {'Age': 24, 'Sex': 'female', 'Embarked': 'C'},
-                {'Age': 3, 'Sex': 'male', 'Embarked': 'C'},
-                {'Age': 21, 'Sex': 'male', 'Embarked': 'S'}
-            ]
-            # json_ = request.json
-            query = pd.get_dummies(pd.DataFrame(json_))
 
-            # https://github.com/amirziai/sklearnflask/issues/3
-            # Thanks to @lorenzori
-            query = query.reindex(columns=model_columns, fill_value=0)
+            '''
+            load data - would use user input
+            '''
+            x_test = joblib.load('./static/public/x_test')
+            y_test = joblib.load('./static/public/y_test')
 
-            prediction = list(clf.predict(query))
+
+            prediction = clf.predict(x_test)
+            print('Prediction')
             print(prediction)
-            # response = jsonify({'prediction':'predict'})
-            # response.headers.add('Access-Control-Allow-Origin', '*')
-            # return response
-            return prediction
+            d = map(lambda x: float(x), prediction)
+            treeScore = clf.score(x_test, y_test)
+            print('treeScore', treeScore)
+            response = jsonify({'test': 'sucess'})
+            # response = jsonify({
+            #     'treeScore': treeScore,
+            #     'prediction': list(d)
+            # })
+
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
 
 
-        except Exception:
-            print('exception')
-            # response = jsonify({'prediction': 'error'})
-            # response.headers.add('Access-Control-Allow-Origin', '*')
-            # return response
-            # return jsonify({'error': str(e), 'trace': traceback.format_exc()})
+        except Exception as e:
+            print(e)
+            response = jsonify({'error': str(e)})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
     else:
         print('train first')
-        # response = jsonify({'prediction': 'else'})
-        # response.headers.add('Access-Control-Allow-Origin', '*')
-        # return response
+        response = jsonify({'test': 'need to train'})
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        return response
 
-@app.route('/train', methods=['GET'])
-def train():
-    # using random forest as an example
-    # can do the training separately and just update the pickles
+@app.route('/traindeath', methods=['GET'])
+def traindeath():
+    import pandas as pd
+    import numpy as np
+    import re
+    import csv
+    import random
 
-    df = pd.read_csv(training_data)
-    df_ = df[include]
 
-    categoricals = []  # going to one-hot encode categorical variables
+    column_names = ['resident_status', 'education_2003_revision', 'education_reporting_flag',
+                    'month_of_death', 'sex', 'detail_age_type', 'detail_age',
+                    'place_of_death_and_decedents_status', 'marital_status',
+                    'day_of_week_of_death', 'current_data_year',
+                    'injury_at_work', 'manner_of_death', 'activity_code',
+                    'place_of_injury_for_causes_w00_y34_except_y06_and_y07_',
+                    '39_cause_recode', 'race']
 
-    for col, col_type in df_.dtypes.iteritems():
-        if col_type == 'O':
-            categoricals.append(col)
-        else:
-            df_[col].fillna(0, inplace=True)  # fill NA's with 0 for ints/floats, too generic
+    # test if data is already loaded
+    try:
+        clf = joblib.load('./static/public/model')
+        print(clf)
+        if clf is not None:
+            print('model clf already exists')
+            response = jsonify({'test': 'already created'})
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            return response
+    except Exception:
+        print('model not yet created')
 
-    # get_dummies effectively creates one-hot encoded variables
-    df_ohe = pd.get_dummies(df_, columns=categoricals, dummy_na=True)
 
-    x = df_ohe[df_ohe.columns.difference([dependent_variable])]
-    y = df_ohe[dependent_variable]
+    #IMPORT DATA
+    data = pd.read_csv('./static/public/intermediate_clean_2015_deaths.csv')
 
-    # capture a list of columns that will be used for prediction
-    global model_columns
-    model_columns = list(x.columns)
-    # joblib.dump(model_columns, model_columns_file_name)
+    print('read data from csv') # this is quick
 
-    global clf
-    clf = rf()
-    # start = time.time()
-    clf.fit(x, y)
-    # print('Trained in %.1f seconds' % (time.time() - start))
-    # print('Model training score: %s' % clf.score(x, y))
+    #SET GENDER TO BINARY
+    data['sex'] = data['sex'].map({'F':0, 'M': 1}).astype(int)
 
-    # joblib.dump(clf, model_file_name)
+    #MAP MARITAL STATUS AND INJURY AT WORK TO INTEGERS
+    title_mapping = {"M": 1, "W": 2, "S": 3, "D": 4}
+    data['marital_status'] = data['marital_status'].map(title_mapping)
 
-    print('Predict')
-    prediction = predict()
-    # convert to ints
-    d = map(lambda x: int(x), prediction)
+    title_mapping = {"U": 1, "N": 0}
+    data['injury_at_work'] = data['injury_at_work'].map(title_mapping)
 
-    # response = jsonify({'train':'Success'})
-    response = jsonify({'prediction': list(d)})
+    #FILL ALL BLANK CELLS
+    for each in column_names:
+        data[each] = data[each].fillna(0)
+
+    one_hot = ['resident_status', 'education_2003_revision', 'education_reporting_flag',
+                     'sex', 'detail_age_type',
+                    'place_of_death_and_decedents_status', 'marital_status',
+                    'day_of_week_of_death',
+                    'injury_at_work', 'manner_of_death', 'activity_code',
+                    'place_of_injury_for_causes_w00_y34_except_y06_and_y07_', 'race']
+
+    #ONE HOT ENCODING
+    data = pd.get_dummies(data, columns=one_hot)
+    print('one hot encoded') # this is quick
+
+    #CREATE TEST AND TRAIN DATA
+    from sklearn.model_selection import train_test_split
+    n_train = data.drop(['39_cause_recode'], axis=1)
+    z_test = data
+    x_train, x_test, y_train, y_test = train_test_split(n_train, z_test['39_cause_recode'].ravel(), test_size=0.4, random_state=5)
+
+    print('split data') # quick
+
+    #EXAMPLE IMPLEMENTATION WITH SKLEARN
+
+    from sklearn import tree
+    clf = tree.DecisionTreeClassifier()
+    clf = clf.fit(x_train,y_train)
+
+    print('fit data clf') # slow
+
+
+    joblib.dump(clf, './static/public/model')
+    print('dumped') # 
+
+    '''
+    dump test data for testing -- use user input actually
+    '''
+    joblib.dump(x_test, './static/public/x_test')
+    joblib.dump(y_test, './static/public/y_test')
+
+    # clf.predict(x_test)
+
+    # treeScore = clf.score(x_test, y_test)
+    # print("tree score:", treeScore)
+    response = jsonify({'trained': 'success'})
     # response = jsonify(result=list(d))
     response.headers.add('Access-Control-Allow-Origin', '*')
     return response
 
 
 
-@app.route("/api/create_user", methods=["POST"])
-def create_user():
-    incoming = request.get_json()
-    user = User(
-        email=incoming["email"],
-        password=incoming["password"]
-    )
-    db.session.add(user)
-
-    try:
-        db.session.commit()
-    except IntegrityError:
-        return jsonify(message="User with that email already exists"), 409
-
-    new_user = User.query.filter_by(email=incoming["email"]).first()
-
-    return jsonify(
-        id=user.id,
-        token=generate_token(new_user)
-    )
-
-
-@app.route("/api/get_token", methods=["POST"])
-def get_token():
-    incoming = request.get_json()
-    user = User.get_user_with_email_and_password(incoming["email"], incoming["password"])
-    if user:
-        return jsonify(token=generate_token(user))
-
-    return jsonify(error=True), 403
-
-
-@app.route("/api/is_token_valid", methods=["POST"])
-def is_token_valid():
-    incoming = request.get_json()
-    is_valid = verify_token(incoming["token"])
-
-    if is_valid:
-        return jsonify(token_is_valid=True)
-    else:
-        return jsonify(token_is_valid=False), 403
 

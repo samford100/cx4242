@@ -25,32 +25,24 @@ export default class App extends Component {
         console.log(error)
       })
 
-    fetch("/train")
+    fetch("/traindeath")
       .then(response => response.json())
       .then(data => {
         console.log(data)
-        if (data.prediction) {
-          console.log(data.prediction)
-          console.log("issa success - grabbing prediction")
-          this.setState({
-            prediction: data.prediction
+        fetch('/testdeath')
+          .then(res => res.json())
+          .then(da => {
+            console.log(da)
           })
-          // fetch("/predict")
-          //   .then(res => res.json())
-          //   .then(dat => {
-          //     console.log(dat)
-          //     this.setState({
-          //       prediction: dat.prediction
-          //     })
-          //   })
-          //   .catch(err => {
-          //     console.log(err)
-          //   })
-        }
+          .catch(er => {
+            console.log(er)
+          })
       })
-      .catch(error => {
-        console.log(error)
+      .catch(err => {
+        console.log(err)
       })
+
+
 
     
   }
@@ -59,7 +51,7 @@ export default class App extends Component {
 
     return (
       <div className="App">
-        <h1>How ya boi die</h1>
+        <h1>Deaths and stuff</h1>
         <p>{this.state.death ? this.state.death : "loading"}</p>
         <p>{this.state.prediction ? JSON.stringify(this.state.prediction) : "loading"}</p>
 
